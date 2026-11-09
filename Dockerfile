@@ -24,7 +24,8 @@ WORKDIR /app
 # Dependencies first (cached layer). --frozen: exactly uv.lock, which pins torch
 # to the CPU build on Linux (see [tool.uv.sources] in pyproject.toml).
 COPY pyproject.toml uv.lock .python-version ./
-RUN uv sync --frozen --no-dev
+# The uv cache lives in a BuildKit cache mount, not in the image layer.
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
 ENV PATH="/app/.venv/bin:$PATH"
 
 COPY app ./app
@@ -37,7 +38,11 @@ RUN mkdir -p /app/models \
     && test -f "/app/models/${MODEL_NAME}"
 ENV AI_MODEL_PATH=/app/models/${MODEL_NAME}
 
-RUN useradd --create-home --uid 10001 app && chown -R app /app
+# Code, venv and weights stay root-owned and read-only for the service user;
+# only Ultralytics' settings directory needs to be writable.
+RUN useradd --create-home --uid 10001 app \
+    && mkdir -p /app/.ultralytics \
+    && chown -R app /app/.ultralytics
 USER app
 
 EXPOSE 8000
