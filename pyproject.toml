@@ -1,0 +1,45 @@
+[project]
+name = "recruitment-platform-ai"
+version = "0.1.0"
+description = "Object-detection service (YOLO) for interview monitoring in the IT recruitment platform"
+readme = "README.md"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "python-multipart>=0.0.9",
+    "pydantic>=2.7,<3",
+    "pydantic-settings>=2.7,<3",
+    "numpy>=1.26",
+    # Ultralytics depends on opencv-python itself; using the same package avoids two cv2 builds.
+    "opencv-python>=4.10,<5",
+    "ultralytics>=8.3,<9",
+    # Declared directly so the CPU-only source below applies to them.
+    "torch>=2.4",
+    "torchvision>=0.19",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[tool.uv]
+# A service, not a library: nothing to build or install as a package.
+package = false
+
+# On Linux (the Docker image) take torch from PyTorch's CPU index: the default
+# PyPI wheels for Linux bundle CUDA (several GB). Windows/macOS PyPI wheels are CPU already.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+    "model: needs ultralytics/torch and downloads the YOLO weights (set RUN_MODEL_TESTS=1)",
+]

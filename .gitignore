@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.env
+.env.*
+# Model weights are downloaded or baked into the image, never committed.
+*.pt
+*.onnx
+models/*
+!models/.gitkeep
+.ultralytics/
