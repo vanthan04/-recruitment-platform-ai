@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # Contract, validation, auth, limits, video sampling, load shedding — with a
+    # fake detector, so no model weights are needed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.14"
+      - run: uv sync --frozen
+      - run: uv run python -m pytest
+
+  image:
+    # Builds the production image (CPU torch, baked YOLO weights) and runs the
+    # real-model tests inside it, as documented in docs/benchmark.md.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t recruitment-platform-ai:ci .
+      - name: Real-model tests in the image
+        run: >-
+          docker run --rm --user root -e RUN_MODEL_TESTS=1
+          -v "$PWD/tests:/app/tests:ro"
+          recruitment-platform-ai:ci
+          sh -c "uv sync --frozen && uv run python -m pytest"
